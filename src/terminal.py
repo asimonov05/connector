@@ -29,7 +29,6 @@ class InteractiveShell:
         """
         self.process = await asyncio.create_subprocess_exec(
             f"/bin/{self.terminal_name}",
-            "-i",
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -138,7 +137,7 @@ async def main():
     interaction = MockInteract()
 
     await interaction.run(input_queue, output_queue)
-    await shell.start_interactive_shell(input_queue, output_queue)
+    await shell.start(input_queue, output_queue)
     await shell.shutdown()
     await interaction.shutdown()
 
