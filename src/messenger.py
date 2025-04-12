@@ -1,0 +1,53 @@
+import socketio
+from loguru import logger
+
+from .config import get_settings
+from .handler import Handler
+from .kernelwrapper import KernelWrapper
+from src.sender import Sender
+
+settings = get_settings()
+
+
+class Messenger:
+    def __init__(self, kernel: KernelWrapper) -> None:
+        self.sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+        self.sender = Sender(self.sio)
+        self.sender.start()
+        self.handler = Handler(self.sender, kernel)
+        self.__setup_socketio_handlers()
+
+    def __setup_socketio_handlers(self) -> None:
+        @self.sio.on("connect")
+        def on_connect(sid, environ):
+            logger.info("Connected to Socket.IO server")
+
+        @self.sio.on("disconnect")
+        def on_disconnect(sid):
+            logger.info("Disconnected from Socket.IO server")
+
+        @self.sio.on("command")
+        async def on_message(sid, message: dict):
+            if not isinstance(message, dict):
+                return
+
+            logger.info(f"Received message: {message}")
+            command = message.get("command", "")
+            logger.info(f"Executing {command}")
+
+            if command == "restart":
+                self.handler.restart()
+            elif command == "shutdown":
+                self.handler.shutdown()
+            elif command == "interrupt":
+                self.handler.interrupt()
+            elif command == "execute":
+                self.handler.execute(message["code"])
+            elif command == "exit":
+                self.handler.shutdown()
+                self.sio.disconnect()
+            await self.sio.emit("output", data={"status": "operation completed"})
+
+    async def stop(self):
+        await self.sender.stop()
+        self.handler.shutdown()

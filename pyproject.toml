@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "i-python"
+version = "0.1.1"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uuid = "1.30"
+loguru = "0.5.3"
+ipykernel="6.4.2"
+python-multipart = "0.0.5"
+zmq = "0.0.0"
+pydantic = "1.10.4"
+python-socketio = "5.7.1"
+fastapi = "^0.115.12"
+uvicorn = "^0.34.0"
+aiohttp = "^3.11.16"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "1.6.1"
+flake8 = "^6.0.0"
+dlint = "^0.14.1"
+flake8-bugbear = "^23.6.5"
+flake8-pie = "^0.16.0"
+flake8-simplify = "^0.20.0"
+flake8-warnings = "^0.4.0"
+flake8-comprehensions = "^3.13.0"
+flake8-eradicate = "^1.5.0"
+black = "^23.7.0"
+isort = "^5.12.0"
+
+
+[tool.poetry.group.user.dependencies]
+matplotlib = "^3.8.4"
+pandas = "^2.2.2"
+scikit-learn = "^1.4.2"
+numpy = "^1.26.4"
+elasticsearch = "^8.13.0"
+python-dotenv = "^1.0.1"
+scipy = "^1.13.0"
+urllib3 = "^2.2.1"
+lazypredict = "^0.2.12"
+flaml = "^2.1.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
