@@ -21,7 +21,7 @@ RUN poetry config virtualenvs.create false && \
     poetry install --no-interaction --no-cache && \
     rm -rf ~/.cache ~/.config/pypoetry/auth.toml
 
-COPY ./main.py ./
+COPY ./backend.py ./main.py
 COPY ./src ./src
 
 CMD ["python3", "main.py"]

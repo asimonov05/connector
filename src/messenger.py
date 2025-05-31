@@ -1,10 +1,11 @@
 import socketio
 from loguru import logger
 
+from src.sender import Sender
+
 from .config import get_settings
 from .handler import Handler
 from .kernelwrapper import KernelWrapper
-from src.sender import Sender
 
 settings = get_settings()
 
@@ -20,11 +21,11 @@ class Messenger:
     def __setup_socketio_handlers(self) -> None:
         @self.sio.on("connect")
         def on_connect(sid, environ):
-            logger.info("Connected to Socket.IO server")
+            logger.info(f"Client connected {sid}")
 
         @self.sio.on("disconnect")
         def on_disconnect(sid):
-            logger.info("Disconnected from Socket.IO server")
+            logger.info(f"Client disconnected {sid}")
 
         @self.sio.on("command")
         async def on_message(sid, message: dict):

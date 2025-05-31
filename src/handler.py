@@ -4,10 +4,11 @@ from threading import Event, Thread
 import zmq
 from loguru import logger
 
+from src.sender import Sender
+
 from .config import get_settings
 from .kernelwrapper import KernelWrapper
 from .models import Status
-from src.sender import Sender
 
 config = get_settings()
 
@@ -66,9 +67,7 @@ class Handler:
                 "id": message_id,
             }
         )
-        logger.info(
-            f"Sent JupyterClient connection info to code_processing: {jupyter_info}"
-        )
+        logger.info(f"Sent JupyterClient connection info: {jupyter_info}")
 
     def __handle_code(self):
         while self.__kernel.get_status() == Status.BUSY:
@@ -78,9 +77,9 @@ class Handler:
                     return
                 self.__sender.send_message(
                     {
-                        "command": "notebook-upd_code_processing",
+                        "command": "notebook-upd",
                         **(kernel_result.json()),
                     }
                 )
                 logger.info(f"send to middle {kernel_result}")
-        self.__sender.send_message({"command": "notebook-end_code_processing"})
+        self.__sender.send_message({"command": "notebook-end"})

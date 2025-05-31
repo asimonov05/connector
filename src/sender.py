@@ -1,6 +1,6 @@
 import asyncio
-import socketio
 
+import socketio
 from loguru import logger
 
 
