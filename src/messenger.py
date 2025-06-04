@@ -53,7 +53,8 @@ class Messenger:
             elif command == "execute":
                 code = message["code"]
                 await self.sio.emit(
-                    "output", data={"content": {"text": self._input_prompt_format(code)}}
+                    "output",
+                    data={"content": {"text": self._input_prompt_format(code)}},
                 )
                 self.handler.execute(code)
             elif command == "exit":

@@ -1,24 +1,24 @@
 import asyncio
+from contextlib import suppress
+from queue import Empty, Queue
+from threading import Event, Thread
+
 from loguru import logger
 from PyQt5.QtGui import QTextCursor
-
 from PyQt5.QtWidgets import (
     QHBoxLayout,
+    QLineEdit,
     QMainWindow,
     QPushButton,
     QScrollArea,
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QLineEdit,
 )
 
-from frontapp.highlight import PythonHighlighter
 from frontapp.client import SocketIOClient
-from queue import Queue, Empty
-from threading import Thread, Event
-from frontapp.parser import parse_text, is_execution_ended
-from contextlib import suppress
+from frontapp.highlight import PythonHighlighter
+from frontapp.parser import is_execution_ended, parse_text, show_image
 
 
 class PythonTerminal(QMainWindow):
@@ -232,6 +232,7 @@ class PythonTerminal(QMainWindow):
             try:
                 command = await self.__client.get_output()
                 out = parse_text(command)
+                show_image(command)
                 if out:
                     self._add_output(out)
                 elif is_execution_ended(command) and not self.__execute_lock.is_set():
