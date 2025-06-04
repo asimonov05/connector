@@ -1,6 +1,7 @@
 import asyncio
 from loguru import logger
 from PyQt5.QtGui import QTextCursor
+
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
