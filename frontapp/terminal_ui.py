@@ -28,8 +28,6 @@ class PythonTerminal(QMainWindow):
         self.setGeometry(100, 100, 800, 600)
 
         self.initUI()
-        self.history = []
-        self.history_index = -1
         self.__client = SocketIOClient()
         self.__code_queue = Queue()
         self.__client_connection: Thread | None = None
@@ -269,16 +267,6 @@ class PythonTerminal(QMainWindow):
 
         if not command:
             return
-
-        self.history.append(command)
-        self.history_index = len(self.history)
-
-        splitted_command = command.split("\n")
-        command_output = ">>> " + splitted_command[0]
-        if len(splitted_command) > 1:
-            for line in splitted_command[1:]:
-                command_output += "\n... " + line
-        self.output_area.append(command_output)
 
         if command.strip().lower() in ("exit", "quit", "exit()", "quit()"):
             self.close()

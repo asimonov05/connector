@@ -18,6 +18,14 @@ class Messenger:
         self.handler = Handler(self.sender, kernel)
         self.__setup_socketio_handlers()
 
+    def _input_prompt_format(self, code: str) -> str:
+        splitted_command = code.split("\n")
+        command_output = ">>> " + splitted_command[0]
+        if len(splitted_command) > 1:
+            for line in splitted_command[1:]:
+                command_output += "\n... " + line
+        return command_output
+
     def __setup_socketio_handlers(self) -> None:
         @self.sio.on("connect")
         def on_connect(sid, environ):
@@ -43,7 +51,11 @@ class Messenger:
             elif command == "interrupt":
                 self.handler.interrupt()
             elif command == "execute":
-                self.handler.execute(message["code"])
+                code = message["code"]
+                await self.sio.emit(
+                    "output", data={"content": {"text": self._input_prompt_format(code)}}
+                )
+                self.handler.execute(code)
             elif command == "exit":
                 self.handler.shutdown()
                 self.sio.disconnect()

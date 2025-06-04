@@ -20,8 +20,9 @@ def parse_text(jupyter_output: dict | None) -> str | None:
     if stdout:
         output = stdout
     if traceback:
-        output = remove_ansi_escape("\n".join(traceback))
-    return output
+        output = "\n".join(traceback)
+    if output:
+        return remove_ansi_escape(output)
 
 
 def is_execution_ended(jupyter_output: dict | None) -> bool:
