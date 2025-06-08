@@ -12,7 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
     apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
-ENV PATH="${PATH}:${POETRY_HOME}/bin:/home/engee/.local/bin"
 
 WORKDIR /
 COPY poetry.lock pyproject.toml ./
