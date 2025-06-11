@@ -209,27 +209,27 @@ class PythonTerminal(QMainWindow):
 
     async def _client_connection(self) -> None:
         while self.__running:
-            if not self.__client.connected():
-                await asyncio.sleep(0.2)
-            if self.__connected and not self.__client.connected():
-                try:
-                    await self.__client.connect()
-                except Exception:
-                    self.__connected = False
-                    raise
-                finally:
-                    if not self.__connect_lock.is_set():
-                        self.__connect_lock.set()
-            elif not self.__connected and self.__client.connected():
-                try:
-                    await self.__client.disconnect()
-                except Exception:
-                    self.__connected = True
-                    raise
-                finally:
-                    if not self.__connect_lock.is_set():
-                        self.__connect_lock.set()
             try:
+                if not self.__client.connected():
+                    await asyncio.sleep(0.2)
+                if self.__connected and not self.__client.connected():
+                    try:
+                        await self.__client.connect()
+                    except Exception:
+                        self.__connected = False
+                        raise
+                    finally:
+                        if not self.__connect_lock.is_set():
+                            self.__connect_lock.set()
+                elif not self.__connected and self.__client.connected():
+                    try:
+                        await self.__client.disconnect()
+                    except Exception:
+                        self.__connected = True
+                        raise
+                    finally:
+                        if not self.__connect_lock.is_set():
+                            self.__connect_lock.set()
                 command = await self.__client.get_output()
                 out = parse_text(command)
                 show_image(command)
