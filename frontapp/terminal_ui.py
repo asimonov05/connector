@@ -236,16 +236,7 @@ class PythonTerminal(QMainWindow):
         self.url_input.setEnabled(False)
         self.execute_btn.setEnabled(True)
         self.load_file_btn.setEnabled(True)
-        self.files_list.clear()
-        files = []
-        try:
-            response = requests.get(f"{self.__client.server_url}/service/file-list")
-            if response.status_code == 200:
-                files = [file["name"] for file in response.json()]
-        except Exception:
-            pass
-        if files:
-            self.files_list.addItems(files)
+        self._refresh_files_list()
         self.output_area.clear()
 
     def _disconnect_event(self):
@@ -254,6 +245,20 @@ class PythonTerminal(QMainWindow):
         self.execute_btn.setEnabled(False)
         self.load_file_btn.setDisabled(True)
         self.files_list.clear()
+
+    def _refresh_files_list(self) -> None:
+        """Обновление списка файлов с сервера."""
+        self.files_list.clear()
+        try:
+            response = requests.get(f"{self.__client.server_url}/service/file-list")
+            if response.status_code == 200:
+                files = [file["name"] for file in response.json()]
+            else:
+                files = []
+        except Exception:
+            files = []
+        if files:
+            self.files_list.addItems(files)
 
     def start_client(self) -> None:
         if self.__client_connection and self.__client_connection.is_alive():
@@ -365,7 +370,9 @@ class PythonTerminal(QMainWindow):
             logger.exception(e)
             self._add_output(f"Can't load file: {file_path.name}")
         else:
-            self.files_list.addItem(file_path.name)
+            # После загрузки лучше сразу обновить список с сервера,
+            # чтобы не было расхождений.
+            self._refresh_files_list()
 
     def _file_double_clicked(self, item) -> None:
         """
@@ -378,19 +385,27 @@ class PythonTerminal(QMainWindow):
 
     def _show_files_context_menu(self, pos) -> None:
         """
-        Контекстное меню по правому клику по файлу:
-        даём пункт Delete file.
+        Контекстное меню по правому клику:
+        - Delete file (если клик по элементу)
+        - Refresh (всегда)
         """
         item = self.files_list.itemAt(pos)
-        if item is None:
-            return
 
         menu = QMenu(self)
-        delete_action = menu.addAction("Delete file")
+        refresh_action = menu.addAction("Refresh")
+        delete_action = None
+        if item is not None:
+            delete_action = menu.addAction("Delete file")
+
         global_pos = self.files_list.mapToGlobal(pos)
         action = menu.exec_(global_pos)
 
-        if action == delete_action:
+        if action is None:
+            return
+
+        if action == refresh_action:
+            self._refresh_files_list()
+        elif delete_action is not None and action == delete_action:
             self._delete_file(item)
 
     def _delete_file(self, item) -> None:
