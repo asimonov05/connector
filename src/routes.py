@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Response, status
+from fastapi import APIRouter, Response, status, UploadFile, File
+from fastapi.responses import JSONResponse
+from src.config import get_settings
 
 router = APIRouter(prefix="/service")
 
@@ -8,3 +10,23 @@ def check() -> Response:
     return Response(
         status_code=status.HTTP_200_OK, content="serverapi", media_type="plain/text"
     )
+
+
+
+@router.post("/upload")
+async def upload_file(file: UploadFile = File(...)):
+    config = get_settings()
+    file_path = config.UPLOAD_DIR / file.filename
+
+    with file_path.open("wb") as f:
+        while True:
+            chunk = await file.read(1024 * 1024)  # читаем 1MB за раз
+            if not chunk:
+                break
+            f.write(chunk)
+
+    return JSONResponse({
+        "filename": file.filename,
+        "saved_to": str(file_path),
+        "content_type": file.content_type
+    })

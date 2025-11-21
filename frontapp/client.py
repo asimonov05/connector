@@ -11,6 +11,10 @@ class SocketIOClient:
         self.__server_url = server_url
         self._setup_handlers()
         self._output_queue = asyncio.Queue()
+    
+    @property
+    def server_url(self) -> str:
+        return self.__server_url
 
     def set_server_url(self, server_url: str) -> None:
         self.__server_url = server_url

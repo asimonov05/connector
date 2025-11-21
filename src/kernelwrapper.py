@@ -24,11 +24,13 @@ class KernelWrapper:
     def __init__(self) -> None:
         # для фиксирования портов отключаем кэширование таковых
         # https://github.com/jupyter/jupyter_client/issues/955#issuecomment-1621917317
+        config.UPLOAD_DIR.mkdir(exist_ok=True)
         self.__kernel_manager = KernelManager(
             kernel_name="python", cache_ports=False, **config.connection_info
         )
 
-        self.__kernel_manager.start_kernel()
+
+        self.__kernel_manager.start_kernel(cwd=str(config.UPLOAD_DIR))
         info = self.__kernel_manager.client().get_connection_info()
         iopub_ip = f"{info['transport']}://{info['ip']}:{info['iopub_port']}"  # type: ignore
         shell_ip = f"{info['transport']}://{info['ip']}:{info['shell_port']}"  # type: ignore

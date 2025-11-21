@@ -2,6 +2,8 @@ import asyncio
 from contextlib import suppress
 from queue import Empty, Queue
 from threading import Event, Thread
+import requests
+from pathlib import Path
 
 from loguru import logger
 from PyQt5.QtGui import QTextCursor
@@ -14,6 +16,7 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QFileDialog,
 )
 
 from frontapp.client import SocketIOClient
@@ -34,6 +37,7 @@ class PythonTerminal(QMainWindow):
         self.__connected = False
         self.__connect_lock = Event()
         self.__execute_lock = Event()
+    
 
     def initUI(self):
         # Main widget
@@ -104,6 +108,47 @@ class PythonTerminal(QMainWindow):
         scroll.setWidget(self.output_area)
         scroll.setWidgetResizable(True)
         layout.addWidget(scroll)
+
+        # --- БЛОК ЗАГРУЗКИ ФАЙЛА (поле + кнопка) ---
+        file_layout = QHBoxLayout()
+
+        self.file_path_input = QLineEdit()
+        self.file_path_input.setReadOnly(True)
+        self.file_path_input.setPlaceholderText("No file selected")
+        self.file_path_input.setStyleSheet(
+            """
+            QLineEdit {
+                background-color: #1E1E1E;
+                color: #A0A0A0;
+                font-family: Consolas, Courier New, monospace;
+                font-size: 10pt;
+                border: 1px solid #3E3E3E;
+                padding: 4px;
+            }
+        """
+        )
+
+        self.load_file_btn = QPushButton("Load file")
+        self.load_file_btn.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #3E3E3E;
+                color: #D4D4D4;
+                border: 1px solid #5E5E5E;
+                padding: 5px 10px;
+            }
+            QPushButton:hover {
+                background-color: #4E4E4E;
+            }
+        """
+        )
+        self.load_file_btn.clicked.connect(self.load_file)
+        self.load_file_btn.setDisabled(True)
+
+        file_layout.addWidget(self.file_path_input)
+        file_layout.addWidget(self.load_file_btn)
+        layout.addLayout(file_layout)
+        # --- КОНЕЦ БЛОКА ЗАГРУЗКИ ФАЙЛА ---
 
         # Input area
         self.input_area = QTextEdit()
@@ -182,6 +227,7 @@ class PythonTerminal(QMainWindow):
         self.connect_btn.setText("Disconnect")
         self.url_input.setEnabled(False)
         self.execute_btn.setEnabled(True)
+        self.load_file_btn.setEnabled(True)
         self.output_area.clear()
 
     def _disconnect_event(self):
@@ -249,7 +295,7 @@ class PythonTerminal(QMainWindow):
             self.__connected = False
 
     def clear_input(self):
-        self.input_area.clear()
+        self.output_area.clear()
 
     def _execute_command_sync(self, command: str) -> None:
         self.__execute_lock.clear()
@@ -275,3 +321,25 @@ class PythonTerminal(QMainWindow):
 
         self.input_area.clear()
         self._execute_command_sync(command)
+
+    def load_file(self) -> None:
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Python file",
+            "",
+            "Python Files (*.py);;All Files (*)",
+        )
+        if not file_path:
+            return
+
+        file_path = Path(file_path)
+        self.file_path_input.setText(f"Loading: {file_path.name}")
+
+        try:
+            with open(file_path, "r") as f:
+                requests.post(f"{self.__client.server_url}/service/upload", files={"file": (file_path.name, f)})
+        except Exception as e:
+            logger.exception(e)
+            self.file_path_input.setText(f"Error while loading: {file_path.name}")
+        else:
+            self.file_path_input.setText(f"Loaded: {file_path.name}")

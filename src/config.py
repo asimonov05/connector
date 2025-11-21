@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from pydantic import BaseSettings, Field
+from pathlib import Path
 
 
 class JupyterClientInfo(BaseSettings):
@@ -17,6 +18,7 @@ class Config(BaseSettings):
     SOCKETIO_HOST: str = "0.0.0.0"
     SOCKETIO_PORT: int = 8000
     jupyter_client_info: JupyterClientInfo = JupyterClientInfo()  # type: ignore[call-arg]
+    UPLOAD_DIR: Path = Path("/user")
 
     @property
     def connection_info(self) -> dict:
