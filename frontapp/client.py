@@ -11,7 +11,7 @@ class SocketIOClient:
         self.__server_url = server_url
         self._setup_handlers()
         self._output_queue = asyncio.Queue()
-    
+
     @property
     def server_url(self) -> str:
         return self.__server_url
@@ -42,7 +42,11 @@ class SocketIOClient:
                     f"{self.__server_url}:{default_port}/service/check"
                 ) as response:
                     assert response.status == 200
-            except (AssertionError, aiohttp.ClientConnectionError, aiohttp.ClientResponseError):
+            except (
+                AssertionError,
+                aiohttp.ClientConnectionError,
+                aiohttp.ClientResponseError,
+            ):
                 pass
             else:
                 return default_port
@@ -53,7 +57,11 @@ class SocketIOClient:
                         f"{self.__server_url}:{port}/service/check"
                     ) as response:
                         assert response.status == 200
-                except (AssertionError, aiohttp.ClientConnectionError, aiohttp.ClientResponseError):
+                except (
+                    AssertionError,
+                    aiohttp.ClientConnectionError,
+                    aiohttp.ClientResponseError,
+                ):
                     pass
                 else:
                     return port

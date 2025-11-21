@@ -29,7 +29,6 @@ class KernelWrapper:
             kernel_name="python", cache_ports=False, **config.connection_info
         )
 
-
         self.__kernel_manager.start_kernel(cwd=str(config.UPLOAD_DIR))
         info = self.__kernel_manager.client().get_connection_info()
         iopub_ip = f"{info['transport']}://{info['ip']}:{info['iopub_port']}"  # type: ignore

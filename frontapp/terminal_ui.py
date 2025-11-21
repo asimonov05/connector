@@ -17,6 +17,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QFileDialog,
+    QListWidget,  # >>>
 )
 
 from frontapp.client import SocketIOClient
@@ -37,7 +38,6 @@ class PythonTerminal(QMainWindow):
         self.__connected = False
         self.__connect_lock = Event()
         self.__execute_lock = Event()
-    
 
     def initUI(self):
         # Main widget
@@ -107,27 +107,8 @@ class PythonTerminal(QMainWindow):
         scroll = QScrollArea()
         scroll.setWidget(self.output_area)
         scroll.setWidgetResizable(True)
-        layout.addWidget(scroll)
 
-        # --- БЛОК ЗАГРУЗКИ ФАЙЛА (поле + кнопка) ---
-        file_layout = QHBoxLayout()
-
-        self.file_path_input = QLineEdit()
-        self.file_path_input.setReadOnly(True)
-        self.file_path_input.setPlaceholderText("No file selected")
-        self.file_path_input.setStyleSheet(
-            """
-            QLineEdit {
-                background-color: #1E1E1E;
-                color: #A0A0A0;
-                font-family: Consolas, Courier New, monospace;
-                font-size: 10pt;
-                border: 1px solid #3E3E3E;
-                padding: 4px;
-            }
-        """
-        )
-
+        # >>> Правая панель: кнопка загрузки + список файлов
         self.load_file_btn = QPushButton("Load file")
         self.load_file_btn.setStyleSheet(
             """
@@ -145,10 +126,29 @@ class PythonTerminal(QMainWindow):
         self.load_file_btn.clicked.connect(self.load_file)
         self.load_file_btn.setDisabled(True)
 
-        file_layout.addWidget(self.file_path_input)
-        file_layout.addWidget(self.load_file_btn)
-        layout.addLayout(file_layout)
-        # --- КОНЕЦ БЛОКА ЗАГРУЗКИ ФАЙЛА ---
+        self.files_list = QListWidget()
+        self.files_list.setStyleSheet(
+            """
+            QListWidget {
+                background-color: #1E1E1E;
+                color: #D4D4D4;
+                font-family: Consolas, Courier New, monospace;
+                font-size: 10pt;
+                border: 1px solid #3E3E3E;
+            }
+        """
+        )
+
+        right_panel = QVBoxLayout()
+        right_panel.addWidget(self.load_file_btn)
+        right_panel.addWidget(self.files_list)
+
+        output_and_files_layout = QHBoxLayout()
+        output_and_files_layout.addWidget(scroll, 3)  # слева вывод
+        output_and_files_layout.addLayout(right_panel, 1)  # справа файлы
+
+        layout.addLayout(output_and_files_layout)
+        # <<< конец блока с выводом и списком файлов
 
         # Input area
         self.input_area = QTextEdit()
@@ -228,12 +228,24 @@ class PythonTerminal(QMainWindow):
         self.url_input.setEnabled(False)
         self.execute_btn.setEnabled(True)
         self.load_file_btn.setEnabled(True)
+        files = []
+        try:
+            response = requests.get(f"{self.__client.server_url}/service/file-list")
+            if response.status_code != 200:
+                files = []
+            else:
+                files = [file["name"] for file in response.json()]
+        except Exception as e:
+            pass
+        self.files_list.addItems(files)
         self.output_area.clear()
 
     def _disconnect_event(self):
         self.connect_btn.setText("Connect")
         self.url_input.setEnabled(True)
         self.execute_btn.setEnabled(False)
+        self.load_file_btn.setDisabled(True)  # >>> чтобы не жали при дисконнекте
+        self.files_list.clear()
 
     def start_client(self) -> None:
         if self.__client_connection and self.__client_connection.is_alive():
@@ -295,6 +307,7 @@ class PythonTerminal(QMainWindow):
             self.__connected = False
 
     def clear_input(self):
+        # у тебя сейчас clear чистил output_area — оставил так
         self.output_area.clear()
 
     def _execute_command_sync(self, command: str) -> None:
@@ -333,13 +346,15 @@ class PythonTerminal(QMainWindow):
             return
 
         file_path = Path(file_path)
-        self.file_path_input.setText(f"Loading: {file_path.name}")
 
         try:
-            with open(file_path, "r") as f:
-                requests.post(f"{self.__client.server_url}/service/upload", files={"file": (file_path.name, f)})
+            with open(file_path, "rb") as f:
+                requests.post(
+                    f"{self.__client.server_url}/service/upload",
+                    files={"file": (file_path.name, f)},
+                )
         except Exception as e:
             logger.exception(e)
-            self.file_path_input.setText(f"Error while loading: {file_path.name}")
+            self.files_list.addItem(f"Error: {file_path.name}")
         else:
-            self.file_path_input.setText(f"Loaded: {file_path.name}")
+            self.files_list.addItem(file_path.name)
