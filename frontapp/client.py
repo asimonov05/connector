@@ -1,11 +1,12 @@
 import asyncio
 
+import aiohttp
 import socketio
 from loguru import logger
 
 
 class SocketIOClient:
-    def __init__(self, server_url: str = "http://127.0.0.1:8000"):
+    def __init__(self, server_url: str = "http://127.0.0.1"):
         self.__sio = socketio.AsyncClient()
         self.__server_url = server_url
         self._setup_handlers()
@@ -30,7 +31,35 @@ class SocketIOClient:
     def connected(self):
         return self.__sio.connected
 
+    async def check_server_port_for_host(self, default_port=8000) -> int:
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(
+                    f"{self.__server_url}:{default_port}/service/check"
+                ) as response:
+                    assert response.status == 200
+            except (AssertionError, aiohttp.ClientConnectionError, aiohttp.ClientResponseError):
+                pass
+            else:
+                return default_port
+
+            for port in range(5000, 9000):
+                try:
+                    async with session.get(
+                        f"{self.__server_url}:{port}/service/check"
+                    ) as response:
+                        assert response.status == 200
+                except (AssertionError, aiohttp.ClientConnectionError, aiohttp.ClientResponseError):
+                    pass
+                else:
+                    return port
+        raise Exception("No server running on this host adress")
+
     async def connect(self):
+        if len(self.__server_url.split(":")) == 2:
+            port = await self.check_server_port_for_host()
+            self.__server_url += f":{port}"
+        logger.info(f"{self.__server_url=}")
         await self.__sio.connect(self.__server_url, transports=["websocket"])
 
     async def disconnect(self):

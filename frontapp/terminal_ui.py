@@ -49,7 +49,7 @@ class PythonTerminal(QMainWindow):
 
         # URL input field
         self.url_input = QLineEdit()
-        self.url_input.setText("http://127.0.0.1:8000")
+        self.url_input.setText("http://127.0.0.1")
         self.url_input.setStyleSheet(
             """
             QLineEdit {
