@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Response, status, UploadFile, File
+from fastapi import APIRouter, File, HTTPException, Response, UploadFile, status
 from fastapi.responses import JSONResponse
+
 from src.config import get_settings
 
 router = APIRouter(prefix="/service")
@@ -57,3 +58,22 @@ async def file_list() -> list[dict]:
         )
 
     return result
+
+
+@router.delete("/delete-file")
+async def delete_file(name: str):
+    config = get_settings()
+    file_path = config.UPLOAD_DIR / name
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if not file_path.is_file():
+        raise HTTPException(status_code=400, detail="Not a file")
+
+    try:
+        file_path.unlink()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error deleting file: {e}")
+
+    return {"deleted": name, "status": "ok"}

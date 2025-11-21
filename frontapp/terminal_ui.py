@@ -1,23 +1,25 @@
 import asyncio
 from contextlib import suppress
+from pathlib import Path
 from queue import Empty, Queue
 from threading import Event, Thread
-import requests
-from pathlib import Path
 
+import requests
 from loguru import logger
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QTextCursor
+from PyQt5.QtWidgets import QMenu
 from PyQt5.QtWidgets import (
+    QFileDialog,
     QHBoxLayout,
     QLineEdit,
+    QListWidget,
     QMainWindow,
     QPushButton,
     QScrollArea,
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QFileDialog,
-    QListWidget,  # >>>
 )
 
 from frontapp.client import SocketIOClient
@@ -108,7 +110,7 @@ class PythonTerminal(QMainWindow):
         scroll.setWidget(self.output_area)
         scroll.setWidgetResizable(True)
 
-        # >>> Правая панель: кнопка загрузки + список файлов
+        # Правая панель: кнопка загрузки + список файлов
         self.load_file_btn = QPushButton("Load file")
         self.load_file_btn.setStyleSheet(
             """
@@ -138,6 +140,13 @@ class PythonTerminal(QMainWindow):
             }
         """
         )
+        # двойной клик по файлу
+        self.files_list.itemDoubleClicked.connect(self._file_double_clicked)
+        # контекстное меню по правому клику
+        self.files_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.files_list.customContextMenuRequested.connect(
+            self._show_files_context_menu
+        )
 
         right_panel = QVBoxLayout()
         right_panel.addWidget(self.load_file_btn)
@@ -148,7 +157,6 @@ class PythonTerminal(QMainWindow):
         output_and_files_layout.addLayout(right_panel, 1)  # справа файлы
 
         layout.addLayout(output_and_files_layout)
-        # <<< конец блока с выводом и списком файлов
 
         # Input area
         self.input_area = QTextEdit()
@@ -228,23 +236,23 @@ class PythonTerminal(QMainWindow):
         self.url_input.setEnabled(False)
         self.execute_btn.setEnabled(True)
         self.load_file_btn.setEnabled(True)
+        self.files_list.clear()
         files = []
         try:
             response = requests.get(f"{self.__client.server_url}/service/file-list")
-            if response.status_code != 200:
-                files = []
-            else:
+            if response.status_code == 200:
                 files = [file["name"] for file in response.json()]
-        except Exception as e:
+        except Exception:
             pass
-        self.files_list.addItems(files)
+        if files:
+            self.files_list.addItems(files)
         self.output_area.clear()
 
     def _disconnect_event(self):
         self.connect_btn.setText("Connect")
         self.url_input.setEnabled(True)
         self.execute_btn.setEnabled(False)
-        self.load_file_btn.setDisabled(True)  # >>> чтобы не жали при дисконнекте
+        self.load_file_btn.setDisabled(True)
         self.files_list.clear()
 
     def start_client(self) -> None:
@@ -307,7 +315,7 @@ class PythonTerminal(QMainWindow):
             self.__connected = False
 
     def clear_input(self):
-        # у тебя сейчас clear чистил output_area — оставил так
+        # сейчас clear чистит output_area
         self.output_area.clear()
 
     def _execute_command_sync(self, command: str) -> None:
@@ -355,6 +363,53 @@ class PythonTerminal(QMainWindow):
                 )
         except Exception as e:
             logger.exception(e)
-            self.files_list.addItem(f"Error: {file_path.name}")
+            self._add_output(f"Can't load file: {file_path.name}")
         else:
             self.files_list.addItem(file_path.name)
+
+    def _file_double_clicked(self, item) -> None:
+        """
+        Двойной клик по файлу:
+        если .py — выполнить %run {filename}
+        """
+        name = item.text()
+        if name.lower().endswith(".py"):
+            self._execute_command_sync(f"%run {name}")
+
+    def _show_files_context_menu(self, pos) -> None:
+        """
+        Контекстное меню по правому клику по файлу:
+        даём пункт Delete file.
+        """
+        item = self.files_list.itemAt(pos)
+        if item is None:
+            return
+
+        menu = QMenu(self)
+        delete_action = menu.addAction("Delete file")
+        global_pos = self.files_list.mapToGlobal(pos)
+        action = menu.exec_(global_pos)
+
+        if action == delete_action:
+            self._delete_file(item)
+
+    def _delete_file(self, item) -> None:
+        """
+        Удаление файла на сервере и из списка.
+        """
+        name = item.text()
+        try:
+            resp = requests.delete(
+                f"{self.__client.server_url}/service/delete-file",
+                params={"name": name},
+            )
+            if resp.status_code != 200:
+                self._add_output(f"Can't delete file: {name}")
+                return
+        except Exception as e:
+            logger.exception(e)
+            self._add_output(f"Error while deleting file: {name}")
+            return
+
+        row = self.files_list.row(item)
+        self.files_list.takeItem(row)

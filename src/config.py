@@ -1,7 +1,7 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import BaseSettings, Field
-from pathlib import Path
 
 
 class JupyterClientInfo(BaseSettings):
